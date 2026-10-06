@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { --gold: #d4af37; }
+html { background: #070605; color: #f5efe0; -webkit-tap-highlight-color: transparent; }
+body { min-height: 100dvh; font-family: var(--font-body), system-ui, sans-serif; overflow-x: hidden; }
+::selection { background: #d4af37; color: #070605; }
+
+@layer components {
+  .gold-text { background: linear-gradient(100deg, #8a6c1d 0%, #f3e0a1 35%, #d4af37 55%, #f3e0a1 75%, #8a6c1d 100%); background-size: 220% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 7s linear infinite; }
+  .btn-gold { @apply inline-flex items-center justify-center rounded-sm px-8 py-4 font-display text-lg tracking-wide text-ink transition active:scale-[.98] disabled:opacity-40; background: linear-gradient(135deg, #f3e0a1, #d4af37 50%, #8a6c1d); box-shadow: 0 6px 30px -8px rgba(212,175,55,.55); }
+  .btn-ghost { @apply inline-flex items-center justify-center rounded-sm border border-gold/40 px-5 py-3 text-sm text-gold-light transition hover:bg-gold/10 active:scale-[.98] disabled:opacity-40; }
+  .panel { @apply rounded-sm border border-gold/25 bg-coal/80 p-4; }
+  .input { @apply w-full rounded-sm border border-gold/30 bg-ink px-4 py-3 text-base text-white outline-none focus:border-gold; }
+  .carpet { height: 10px; background: linear-gradient(90deg, #5c0f16, #b3262f 50%, #5c0f16); border-top: 1px solid #d4af37; border-bottom: 1px solid #d4af37; }
+}
+
+/* Spotlights – die eine große Inszenierung der Seite */
+.stage { position: fixed; inset: 0; z-index: -1; background: radial-gradient(ellipse 80% 50% at 50% 0%, #1b1508 0%, #070605 70%); overflow: hidden; }
+.beam { position: absolute; top: -10%; width: 38vmax; height: 120vmax; transform-origin: top center; background: linear-gradient(180deg, rgba(243,224,161,.20), rgba(243,224,161,0) 75%); clip-path: polygon(46% 0, 54% 0, 100% 100%, 0 100%); filter: blur(6px); }
+.beam.a { left: 8%; animation: sweepA 14s ease-in-out infinite alternate; }
+.beam.b { right: 8%; animation: sweepB 17s ease-in-out infinite alternate; }
+.spot-in { animation: spotIn 900ms ease-out both; }
+
+@keyframes sweepA { from { transform: rotate(-22deg); } to { transform: rotate(14deg); } }
+@keyframes sweepB { from { transform: rotate(22deg); } to { transform: rotate(-14deg); } }
+@keyframes shimmer { to { background-position: -220% 0; } }
+@keyframes spotIn { from { opacity: 0; filter: brightness(3) blur(8px); transform: scale(.96); } to { opacity: 1; filter: none; transform: none; } }
+@keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+.rise { animation: rise .6s ease-out both; }
+@media (prefers-reduced-motion: reduce) { .beam, .gold-text, .spot-in, .rise { animation: none !important; } }
