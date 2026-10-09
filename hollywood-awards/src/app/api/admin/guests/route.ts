@@ -19,6 +19,7 @@ const fields = (f: FormData) => ({
   display_name: String(f.get("display_name") ?? "").trim(),
   description: String(f.get("description") ?? "").trim() || null,
   nominated: f.get("nominated") !== "false",
+  gender: f.get("gender") === "f" ? "f" : "m",
 });
 
 export async function GET() {

@@ -15,6 +15,7 @@ create table if not exists guests (
   description text,
   photo_path text,
   nominated boolean not null default true,     -- darf dieser Gast nominiert werden?
+  gender text not null default 'm' check (gender in ('m','f')),
   created_at timestamptz not null default now()
 );
 
@@ -24,7 +25,8 @@ create table if not exists categories (
   question text,
   emoji text not null default '🏆',
   position int not null default 0,
-  active boolean not null default true
+  active boolean not null default true,
+  audience text not null default 'all' check (audience in ('all','m','f'))  -- wer steht zur Wahl
 );
 
 -- Jedes Smartphone bekommt beim ersten Betreten eine zufällige ID (Cookie). Keine Namen, keine Codes.
@@ -56,7 +58,11 @@ begin
   if (select voting_status from settings where id = 1) <> 'open' then return 'not_open'; end if;
   if not exists (select 1 from voters where id = p_voter) then return 'invalid_guest'; end if;
   if not exists (select 1 from categories where id = p_category and active) then return 'invalid_category'; end if;
-  if not exists (select 1 from guests where id = p_nominee and nominated) then return 'invalid_nominee'; end if;
+  if not exists (
+    select 1 from guests g, categories c
+    where g.id = p_nominee and g.nominated and c.id = p_category
+      and (c.audience = 'all' or c.audience = g.gender)
+  ) then return 'invalid_nominee'; end if;
   insert into votes (voter_id, category_id, nominee_id) values (p_voter, p_category, p_nominee);
   return 'ok';
 exception when unique_violation then
@@ -74,15 +80,9 @@ revoke all on function vote_results() from public, anon, authenticated;
 -- Privater Foto-Bucket (Auslieferung nur über kurzlebige Signed URLs vom Server)
 insert into storage.buckets (id, name, public) values ('photos', 'photos', false) on conflict (id) do nothing;
 
--- Beispiel-Kategorien
-insert into categories (title, question, emoji, position) select * from (values
-  ('Coolstes Outfit','Wer hat heute den besten Look?','🏆',1),
-  ('Bestes Hollywood-Feeling','Wer bringt den Red Carpet zum Strahlen?','🎬',2),
-  ('Größter Entertainer','Wer hat den ganzen Saal im Griff?','🎤',3),
-  ('Beste Tanzmoves','Wer gehört auf die Tanzfläche der Stars?','💃',4),
-  ('Lustigster Gast','Bei wem tun die Wangen vom Lachen weh?','😂',5),
-  ('Party Animal','Wer geht als Letzter nach Hause?','🔥',6),
-  ('Überraschung des Abends','Wer hat dich am meisten überrascht?','🎁',7),
-  ('Sympathischster Gast','Mit wem würdest du sofort einen Film drehen?','💛',8),
-  ('Hollywood Star des Abends','Der größte Award der Nacht.','⭐',9)
-) as v(title, question, emoji, position) where not exists (select 1 from categories);
+-- Die drei Kategorien für den Abend
+insert into categories (title, question, emoji, position, audience) select * from (values
+  ('Best Dressed – Male','Wer hat den besten Look unter den Herren?','🕴️',1,'m'),
+  ('Best Dressed – Female','Wer hat den besten Look unter den Damen?','👗',2,'f'),
+  ('Sympathischster Gast','Mit wem würdest du sofort einen Film drehen?','💛',3,'all')
+) as v(title, question, emoji, position, audience) where not exists (select 1 from categories);

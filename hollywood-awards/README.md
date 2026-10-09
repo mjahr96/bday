@@ -9,6 +9,9 @@ Mobile-first Award-Show-Voting für Gäste (30–100 Personen). Next.js 14 · Ty
 - Die Voter-ID kommt immer aus dem signierten Cookie, nie aus dem Request-Body.
 - Fotos liegen in einem **privaten** Bucket und werden nur als kurzlebige Signed URLs (1 h) an eingeloggte Gäste ausgeliefert.
 
+## Kategorien nach Geschlecht
+Jeder Gast hat ein Geschlecht (m/f), jede Kategorie eine Zielgruppe (alle / nur Männer / nur Frauen). Abstimmende sehen nur passende Kandidaten, und die Datenbank lehnt unpassende Stimmen ab. Für eine bereits eingerichtete Datenbank: `supabase/migration-gender.sql` einmal im SQL Editor ausführen.
+
 ## Seiten
 | URL | Zweck |
 |---|---|

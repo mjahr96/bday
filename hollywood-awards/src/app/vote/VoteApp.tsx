@@ -113,7 +113,7 @@ function Category({ cat, open, onBack, onVoted, onConflict }: { cat: Cat; open: 
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
-  useEffect(() => { api("/api/vote/candidates").then((r) => setCands(r.ok ? r.data.candidates : [])); }, []);
+  useEffect(() => { api(`/api/vote/candidates?category_id=${cat.id}`).then((r) => setCands(r.ok ? r.data.candidates : [])); }, [cat.id]);
 
   const cast = async () => {
     if (!sel || busy) return;

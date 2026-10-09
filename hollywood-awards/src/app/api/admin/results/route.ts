@@ -6,8 +6,8 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const g = await adminGuard(); if (g) return g;
   const [cats, guests, res, status] = await Promise.all([
-    db.from("categories").select("id, title, emoji, active").order("position"),
-    db.from("guests").select("id, display_name, photo_path, nominated"),
+    db.from("categories").select("id, title, emoji, active, audience").order("position"),
+    db.from("guests").select("id, display_name, photo_path, nominated, gender"),
     db.rpc("vote_results"),
     getStatus(),
   ]);
@@ -17,7 +17,7 @@ export async function GET() {
   (res.data ?? []).forEach((r: any) => { (byCat[r.category_id] ??= {})[r.nominee_id] = Number(r.votes); total += Number(r.votes); });
   const categories = (cats.data ?? []).filter((c) => c.active).map((c) => ({
     id: c.id, title: c.title, emoji: c.emoji,
-    rows: (guests.data ?? []).filter((x) => x.nominated || byCat[c.id]?.[x.id])
+    rows: (guests.data ?? []).filter((x) => (c.audience === "all" || c.audience === x.gender) && (x.nominated || byCat[c.id]?.[x.id]))
       .map((x) => ({ id: x.id, name: x.display_name, photo: x.photo_path ? urls[x.photo_path] ?? null : null, votes: byCat[c.id]?.[x.id] ?? 0 }))
       .sort((a, b) => b.votes - a.votes || a.name.localeCompare(b.name)),
   }));

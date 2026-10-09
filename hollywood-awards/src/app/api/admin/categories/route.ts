@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { adminGuard } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
-const clean = (b: any) => ({ title: String(b.title ?? "").trim(), question: String(b.question ?? "").trim() || null, emoji: String(b.emoji ?? "🏆").trim() || "🏆", active: b.active !== false });
+const clean = (b: any) => ({ title: String(b.title ?? "").trim(), question: String(b.question ?? "").trim() || null, emoji: String(b.emoji ?? "🏆").trim() || "🏆", active: b.active !== false, audience: ["m", "f"].includes(b.audience) ? b.audience : "all" });
 
 export async function GET() {
   const g = await adminGuard(); if (g) return g;

@@ -4,8 +4,9 @@ import Link from "next/link";
 import QRCode from "qrcode";
 import Avatar from "@/components/Avatar";
 
-type Guest = { id: string; first_name: string; last_name: string; display_name: string; description: string | null; photo: string | null; nominated: boolean; votes_received: number };
-type Cat = { id: string; title: string; question: string | null; emoji: string; active: boolean };
+type Guest = { id: string; first_name: string; last_name: string; display_name: string; description: string | null; photo: string | null; nominated: boolean; gender: "m" | "f"; votes_received: number };
+type Cat = { id: string; title: string; question: string | null; emoji: string; active: boolean; audience: "all" | "m" | "f" };
+const AUDIENCE = { all: "Alle Gäste", m: "Nur Männer", f: "Nur Frauen" } as const;
 type Res = { status: string; total: number; categories: { id: string; title: string; emoji: string; rows: { id: string; name: string; votes: number }[] }[] };
 
 const j = (url: string, method = "GET", body?: unknown) =>
@@ -57,14 +58,14 @@ function Login({ onDone }: { onDone: () => void }) {
 function Guests() {
   const [list, setList] = useState<Guest[]>([]);
   const [edit, setEdit] = useState<Guest | null>(null);
-  const [form, setForm] = useState({ first_name: "", last_name: "", display_name: "", description: "", nominated: true });
+  const [form, setForm] = useState({ first_name: "", last_name: "", display_name: "", description: "", nominated: true, gender: "m" as "m" | "f" });
   const [file, setFile] = useState<File | null>(null);
   const [msg, setMsg] = useState(""); const [busy, setBusy] = useState(false);
   const load = useCallback(() => j("/api/admin/guests").then((r) => setList(r.data.guests ?? [])), []);
   useEffect(() => { load(); }, [load]);
 
-  const reset = () => { setEdit(null); setFile(null); setForm({ first_name: "", last_name: "", display_name: "", description: "", nominated: true }); };
-  const startEdit = (g: Guest) => { setEdit(g); setForm({ first_name: g.first_name, last_name: g.last_name, display_name: g.display_name, description: g.description ?? "", nominated: g.nominated }); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const reset = () => { setEdit(null); setFile(null); setForm({ first_name: "", last_name: "", display_name: "", description: "", nominated: true, gender: "m" }); };
+  const startEdit = (g: Guest) => { setEdit(g); setForm({ first_name: g.first_name, last_name: g.last_name, display_name: g.display_name, description: g.description ?? "", nominated: g.nominated, gender: g.gender }); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const save = async () => {
     setBusy(true); setMsg("");
     const fd = new FormData();
@@ -89,6 +90,7 @@ function Guests() {
         </div>
         <input className="input" placeholder="Anzeigename (sonst Vorname)" value={form.display_name} onChange={(e) => setForm({ ...form, display_name: e.target.value })} />
         <input className="input" placeholder="Kurzbeschreibung (optional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+        <select className="input" value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value as "m" | "f" })} aria-label="Geschlecht"><option value="m">Männlich (m)</option><option value="f">Weiblich (f)</option></select>
         <input type="file" accept="image/*" className="text-sm" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="accent-[#d4af37]" checked={form.nominated} onChange={(e) => setForm({ ...form, nominated: e.target.checked })} /> Kann nominiert werden</label>
         {msg && <p className="text-red-400">{msg}</p>}
@@ -102,7 +104,7 @@ function Guests() {
             <Avatar name={g.display_name} src={g.photo} className="h-20 w-16 shrink-0 rounded-sm text-3xl" />
             <div className="min-w-0 flex-1">
               <div className="font-display text-lg">{g.display_name} <span className="text-xs text-white/40">{g.first_name} {g.last_name}</span></div>
-              <div className="text-xs text-white/50">{g.nominated ? "nominiert" : "nicht nominierbar"}</div>
+              <div className="text-xs text-white/50">{g.gender === "f" ? "weiblich" : "männlich"} · {g.nominated ? "nominiert" : "nicht nominierbar"}</div>
               <div className="mt-2 flex flex-wrap gap-2 text-xs">
                 <button className="btn-ghost !px-3 !py-1" onClick={() => startEdit(g)}>Bearbeiten</button>
                 <button className="btn-ghost !px-3 !py-1 !text-red-300" onClick={() => del(g)}>Löschen</button>
@@ -117,7 +119,7 @@ function Guests() {
 
 function Cats() {
   const [cats, setCats] = useState<Cat[]>([]);
-  const [f, setF] = useState({ emoji: "🏆", title: "", question: "" });
+  const [f, setF] = useState({ emoji: "🏆", title: "", question: "", audience: "all" as Cat["audience"] });
   const load = useCallback(() => j("/api/admin/categories").then((r) => setCats(r.data.categories ?? [])), []);
   useEffect(() => { load(); }, [load]);
   const move = async (i: number, d: number) => { const o = cats.map((c) => c.id); [o[i], o[i + d]] = [o[i + d], o[i]]; await j("/api/admin/categories", "PATCH", { order: o }); load(); };
@@ -128,7 +130,8 @@ function Cats() {
         <h2 className="font-display text-lg">Kategorie hinzufügen</h2>
         <div className="flex gap-3"><input className="input !w-20 text-center" value={f.emoji} onChange={(e) => setF({ ...f, emoji: e.target.value })} /><input className="input" placeholder="Titel *" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
         <input className="input" placeholder="Frage, z. B. „Wer hat den besten Look?“" value={f.question} onChange={(e) => setF({ ...f, question: e.target.value })} />
-        <button className="btn-gold !px-6 !py-3 !text-base" disabled={!f.title.trim()} onClick={async () => { await j("/api/admin/categories", "POST", f); setF({ emoji: "🏆", title: "", question: "" }); load(); }}>Hinzufügen</button>
+        <select className="input" value={f.audience} onChange={(e) => setF({ ...f, audience: e.target.value as Cat["audience"] })} aria-label="Wer steht zur Wahl"><option value="all">Zur Wahl: alle Gäste</option><option value="m">Zur Wahl: nur Männer</option><option value="f">Zur Wahl: nur Frauen</option></select>
+        <button className="btn-gold !px-6 !py-3 !text-base" disabled={!f.title.trim()} onClick={async () => { await j("/api/admin/categories", "POST", f); setF({ emoji: "🏆", title: "", question: "", audience: "all" }); load(); }}>Hinzufügen</button>
       </div>
       <ul className="mt-6 space-y-3">
         {cats.map((c, i) => (
@@ -136,10 +139,12 @@ function Cats() {
             <div className="flex items-center gap-2"><span className="text-2xl">{c.emoji}</span><span className="flex-1 font-display text-lg">{c.title}</span>
               <button className="btn-ghost !px-3 !py-1" disabled={i === 0} onClick={() => move(i, -1)} aria-label="Nach oben">↑</button>
               <button className="btn-ghost !px-3 !py-1" disabled={i === cats.length - 1} onClick={() => move(i, 1)} aria-label="Nach unten">↓</button></div>
+            <p className="mt-1 text-xs text-gold/80">Zur Wahl: {AUDIENCE[c.audience]}</p>
             {c.question && <p className="mt-1 text-sm text-white/55">{c.question}</p>}
             <div className="mt-3 flex flex-wrap gap-2 text-xs">
               <button className="btn-ghost !px-3 !py-1" onClick={() => { const title = prompt("Titel", c.title); if (title) upd(c, { title }); }}>Titel</button>
               <button className="btn-ghost !px-3 !py-1" onClick={() => { const q = prompt("Frage", c.question ?? ""); if (q !== null) upd(c, { question: q }); }}>Frage</button>
+              <button className="btn-ghost !px-3 !py-1" onClick={() => { const order: Cat["audience"][] = ["all", "m", "f"]; upd(c, { audience: order[(order.indexOf(c.audience) + 1) % 3] }); }}>Zielgruppe ändern</button>
               <button className="btn-ghost !px-3 !py-1" onClick={() => upd(c, { active: !c.active })}>{c.active ? "Deaktivieren" : "Aktivieren"}</button>
               <button className="btn-ghost !px-3 !py-1 !text-red-300" onClick={async () => { if (confirm(`„${c.title}“ löschen? Stimmen dieser Kategorie gehen verloren.`)) { await j(`/api/admin/categories?id=${c.id}`, "DELETE"); load(); } }}>Löschen</button>
             </div>
